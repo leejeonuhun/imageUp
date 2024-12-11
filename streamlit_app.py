@@ -2,6 +2,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import cv2
+from io import BytesIO  # 추가된 부분
 
 def resize_image(image, scale_factor=2):
     """
@@ -98,9 +99,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# Requirements (save as requirements.txt):
-# streamlit
-# pillow
-# numpy
-# opencv-python
