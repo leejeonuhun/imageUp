@@ -3,7 +3,6 @@ from PIL import Image
 import numpy as np
 import cv2
 from io import BytesIO
-import os
 
 def resize_image(image, scale_factor=2):
     """
@@ -13,7 +12,6 @@ def resize_image(image, scale_factor=2):
     :param scale_factor: Factor by which to scale the image
     :return: Resized PIL Image
     """
-    # Convert PIL Image to numpy array
     img_array = np.array(image)
 
     # Get original dimensions
@@ -36,119 +34,56 @@ def resize_image(image, scale_factor=2):
 
     return resized_images
 
-def process_folder(folder_path, scale_factor):
-    """
-    Process all images in a folder and resize them
-
-    :param folder_path: Path to the folder containing images
-    :param scale_factor: Scale factor for resizing images
-    :return: List of resized images and their filenames
-    """
-    supported_extensions = [".jpg", ".jpeg", ".png", ".bmp", ".webp"]
-    resized_results = []
-
-    for filename in os.listdir(folder_path):
-        if any(filename.lower().endswith(ext) for ext in supported_extensions):
-            file_path = os.path.join(folder_path, filename)
-            try:
-                original_image = Image.open(file_path)
-                resized_images = resize_image(original_image, scale_factor)
-                resized_results.append((filename, resized_images))
-            except Exception as e:
-                st.error(f"Failed to process {filename}: {e}")
-
-    return resized_results
-
 def main():
-    st.title('🖼️ Image Resizer')
+    st.title('🖼️ Image Resizer with Multiple File Upload')
 
     # Sidebar for additional options
     st.sidebar.header('Resize Settings')
     scale_factor = st.sidebar.slider('Scale Factor', min_value=1.0, max_value=4.0, value=2.0, step=0.5)
 
-    # Option to choose between file or folder upload
-    st.sidebar.header('Choose Input Method')
-    input_method = st.sidebar.radio('Input Method', ['File Upload', 'Folder Upload'])
+    # File uploader for multiple files
+    uploaded_files = st.file_uploader(
+        "Upload multiple image files",
+        type=['jpg', 'jpeg', 'png', 'bmp', 'webp'],
+        accept_multiple_files=True,
+        help="Select multiple image files to resize"
+    )
 
-    if input_method == 'File Upload':
-        # File uploader
-        uploaded_file = st.file_uploader(
-            "Choose an image",
-            type=['jpg', 'jpeg', 'png', 'bmp', 'webp'],
-            help="Upload an image file to resize"
-        )
-
-        if uploaded_file is not None:
-            # Read the image
-            original_image = Image.open(uploaded_file)
-
-            # Display original image
-            st.subheader('Original Image')
-            st.image(original_image, caption=f'Original Size: {original_image.size}')
-
-            # Resize and display
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
             try:
+                # Read the image
+                original_image = Image.open(uploaded_file)
+
+                # Display original image
+                st.subheader(f'Original Image: {uploaded_file.name}')
+                st.image(original_image, caption=f'Original Size: {original_image.size}')
+
+                # Resize and display
                 resized_images = resize_image(original_image, scale_factor)
 
                 # Display resized images
-                st.subheader(f'Resized Images (Scale: {scale_factor}x)')
-
+                st.subheader(f'Resized Images for {uploaded_file.name} (Scale: {scale_factor}x)')
                 for name, img in resized_images.items():
                     st.image(img, caption=f'{name} - {img.size}')
 
                 # Download options
-                st.subheader('Download Resized Images')
+                st.subheader(f'Download Resized Images for {uploaded_file.name}')
                 for name, img in resized_images.items():
                     # Convert image to bytes
                     byte_io = BytesIO()
                     img.save(byte_io, format='PNG')
                     byte_io.seek(0)
 
-                    # Download button
                     st.download_button(
                         label=f'Download {name}',
                         data=byte_io,
-                        file_name=f'resized_{name.lower().replace(" ", "_")}.png',
+                        file_name=f'{uploaded_file.name.split(".")[0]}_resized_{name.lower().replace(" ", "_")}.png',
                         mime='image/png'
                     )
 
             except Exception as e:
-                st.error(f"Error processing image: {e}")
-
-    elif input_method == 'Folder Upload':
-        # Folder path input
-        folder_path = st.text_input("Enter the folder path containing images:")
-
-        if folder_path:
-            if os.path.isdir(folder_path):
-                try:
-                    results = process_folder(folder_path, scale_factor)
-
-                    for filename, resized_images in results:
-                        st.subheader(f'Resized Images for {filename}')
-                        for name, img in resized_images.items():
-                            st.image(img, caption=f'{name} - {img.size}')
-
-                        # Download options
-                        st.subheader(f'Download Resized Images for {filename}')
-                        for name, img in resized_images.items():
-                            # Convert image to bytes
-                            byte_io = BytesIO()
-                            img.save(byte_io, format='PNG')
-                            byte_io.seek(0)
-
-                            # Download button
-                            st.download_button(
-                                label=f'Download {filename} ({name})',
-                                data=byte_io,
-                                file_name=f'{filename}_resized_{name.lower().replace(" ", "_")}.png',
-                                mime='image/png'
-                            )
-
-                except Exception as e:
-                    st.error(f"Error processing folder: {e}")
-            else:
-                st.error("Invalid folder path. Please enter a valid directory.")
+                st.error(f"Error processing {uploaded_file.name}: {e}")
 
 if __name__ == '__main__':
     main()
